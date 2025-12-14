@@ -1,0 +1,170 @@
+{
+  "name": "Demo: My first AI Agent in n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {
+          "responseFormat": "text"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        192
+      ],
+      "id": "5d906620-40c2-4d9a-a8b7-b742295f4f65",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "UtnlsnFRmdUR6Bk3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=Ты карьерный консультант. Твоя цель - помочь выбрать специализацию. \n\nЗадай мне серию вопросов, проанализируй мои ответы и предложи рекомендации по выбору специализации в направлении backend разработка.\n\nВот вопросы, которые ты должен задать по порядку и в конце дать ответ:\n\n1) Твой предыдущий жизненный опыт и достижения\n\n2) Опыт прохождения отборочного бассейна (как субъективный опыт, так и объективный, например, данные из датасета-лога:, например, \"я вошел в топ-5 среди 100 человек по времени, проведенному за АРМ\")\n\n3) Твой возраст, место проживания\n\n4) Твои интересы и любимые занятия\n\n5) Цели обучения и желаемая скорость их достижения\n\n6) Сильные и слабые стороны (по твоему мнению)\n\n7) Желаемый формат работы (удаленно/оффлайн), размер компании\n\nВАЖНО! В начале взаимодействия расскажи о том, какая цель у нашего общения. \n"
+        }
+      },
+      "id": "41174c8a-6ac8-42bd-900e-ca15196600c5",
+      "name": "Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1040,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        32
+      ],
+      "id": "176183d0-38b3-4f5f-bbcb-0518881e94a7",
+      "name": "Telegram Trigger",
+      "webhookId": "174afb5f-ed97-4ea7-87a4-53be96eb3042",
+      "credentials": {
+        "telegramApi": {
+          "id": "BrZXym9JvzVnoWN3",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1392,
+        16
+      ],
+      "id": "5f83c3fb-297a-40dd-bdfb-8c40befd4f2d",
+      "name": "Send a text message",
+      "webhookId": "b81ba466-d6ef-4c47-b1f5-001a016542c8",
+      "credentials": {
+        "telegramApi": {
+          "id": "BrZXym9JvzVnoWN3",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.chat.id }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        272
+      ],
+      "id": "9105d1b4-8375-400d-95b1-c33624b5a374",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4b5ab5af-6750-4a37-9ced-1616b43fef59",
+  "meta": {
+    "templateId": "self-building-ai-agent",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fa00bab3674301fd8e44610c89da4fc8750bc18caf65f232a475954e73363fbb"
+  },
+  "id": "Nf6vvQSF9xnn8XaO",
+  "tags": []
+}

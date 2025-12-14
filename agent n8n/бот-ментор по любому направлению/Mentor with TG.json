@@ -1,0 +1,660 @@
+{
+  "name": "Mentor with TG",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        560
+      ],
+      "id": "8632a7c5-fe03-44ca-9338-7bb875a8d645",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "f1lRi0eyJEK7k0XY",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ebdac2eb-42bc-44b6-a325-5194a42165eb",
+              "leftValue": "={{ $json.isTavilyCall }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        400
+      ],
+      "id": "eec4ef83-358f-472a-b9e4-a0ef06d78d9a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1376,
+        528
+      ],
+      "id": "58674981-4f9f-4dc2-9a54-ce9cb51e696f",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "f1lRi0eyJEK7k0XY",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmResponse = $input.first().json.output;\n//regex\nconst tavilyPattern = /^tavily\\(query=\"(.+)\"\\)$/;\nconst match = llmResponse.match(tavilyPattern);\n\nif (match) {\n  const searchQuery = match[1];\n  // tavily\n  return [{\n    json: {\n      isTavilyCall: true,\n      query: searchQuery,\n      originalMessage: llmResponse\n    }\n  }];\n} else {\n  return [{\n    json: {\n      isTavilyCall: false,\n      response: llmResponse,\n      originalMessage: llmResponse\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        400
+      ],
+      "id": "e3866f6e-41dc-45f2-82cc-77b58882a0ed",
+      "name": "parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\n\n// 1. Получаем текст сообщения из Telegram\n// Используем безопасное чтение (если вдруг придет не текст, а картинка или файл)\nconst message = $('Telegram Trigger').item.json.message;\nconst userInput = message && message.text ? message.text : \"\";\nconst cleanInput = userInput.toLowerCase().trim();\n\n// 2. Список команд для сброса\nconst resetCommands = ['/start', 'reset', 'сброс', 'старт', 'restart'];\n\n// 3. Проверяем, является ли сообщение командой сброса\nif (resetCommands.includes(cleanInput)) {\n  \n  // --- ОЧИСТКА STATIC DATA ---\n  // Удаляем все переменные, связанные с обучением\n  delete staticData.learningPlan;\n  delete staticData.mode;\n  delete staticData.currentModuleIndex;\n  delete staticData.currentConceptIndex;\n  delete staticData.completedTopics;\n  // ---------------------------\n\n  // Принудительно ставим режим interview\n  staticData.mode = 'interview'; \n  \n  return [{\n    json: {\n      mode: 'interview', // Важно: возвращаем режим interview\n      message: 'Привет! Я сбросил предыдущий прогресс. Чему ты хочешь научиться?', // Сообщение-ответ пользователю\n      isCommand: true // Флаг, что это была команда (опционально)\n    }\n  }];\n}\n\n// 4. Если это не сброс, работаем в обычном режиме\nlet currentMode = staticData.mode;\n\n// Если режима еще нет (первый запуск без команды), ставим interview\nif (!currentMode) {\n  currentMode = 'interview';\n}\n\nreturn [{\n  json: {\n    mode: currentMode,\n    message: userInput,\n    isCommand: false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        256
+      ],
+      "id": "b7f86d01-fc82-4760-899e-91bb07f69bc6",
+      "name": "get status"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n   \"query\": \"={{ $json.query }}\",\n   \"search_depth\": \"basic\",\n   \"include_answer\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1136,
+        304
+      ],
+      "id": "079f8644-0e62-4024-a834-60805c57a528",
+      "name": "Tavily"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Исходный вопрос пользователя:\n\n{{ $('Telegram Trigger').item.json.message.text }}\n\nОтвет Tavily (JSON):\n\n{{ JSON.stringify($json.results, null, 2) }}\n\nСформулируй лаконичный ответ пользователю по этому вопросу.\n",
+        "options": {
+          "systemMessage": "=Ты получаешь результаты веб-поиска Tavily в JSON.\n\nИспользуй поле answer и results, чтобы дать пользователю краткий, понятный ответ на его исходный вопрос.\n\nОбязательно опирайся только на информацию из Tavily, не придумывай факты."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        304
+      ],
+      "id": "94dc591e-b9e8-46c4-b32c-72816b8102b7",
+      "name": "ai+tavily"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "Ты — опытный методист и составитель учебных планов. Твоя задача — выяснить потребности пользователя и составить для него структурированный план обучения.\n\nТВОЙ АЛГОРИТМ РАБОТЫ:\n\nШАГ 1. СБОР ИНФОРМАЦИИ\nЕсли пользователь назвал тему слишком широко (например, \"хочу выучить Python\" или \"стать дизайнером\"), ты НЕ составляешь план сразу.\nВместо этого задай 1-2 уточняющих вопроса (по одному за раз), чтобы выяснить:\n- Текущий уровень знаний (новичок, есть опыт?).\n- Цель обучения (для работы, для себя, для экзамена?).\n- Доступное время.\n\nШАГ 2. ГЕНЕРАЦИЯ ПЛАНА (ТОЛЬКО JSON)\nКогда ты понял задачу и готов составить план, твой ответ должен быть СТРОГО в формате JSON.\nНикакого вступительного текста (\"Вот ваш план...\"), никаких пояснений после. Только голый JSON код.\n\nФормат JSON должен быть таким (массив объектов):\n[\n  {\n    \"theme\": \"Название модуля 1\",\n    \"concepts\": [\"Понятие 1\", \"Понятие 2\", \"Понятие 3\"]\n  },\n  {\n    \"theme\": \"Название модуля 2\",\n    \"concepts\": [\"Понятие 1\", \"Понятие 2\"]\n  }\n]\n\nВАЖНО:\n- Если ты просто общаешься и задаешь вопросы — пиши обычным текстом.\n- Если составляешь план — пиши ТОЛЬКО JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "d3e18311-5a80-495c-ae0a-bfe800be3eca",
+      "name": "Mentor"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        224
+      ],
+      "id": "b286f4e4-9fc2-4ace-8fff-e36ddc411dc2",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "f1lRi0eyJEK7k0XY",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "interview",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "2028c273-5ba6-4fad-9d2f-95c52712440c"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2acbd494-e2f1-4269-b35b-59e2db011368",
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "learning",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -240,
+        256
+      ],
+      "id": "86a75a58-e627-41a0-abc4-de5e8d2b9274",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.item.json.output;\nconst staticData = $getWorkflowStaticData('global');\n\nlet parsedPlan = null;\nlet responseType = 'question';\n\n// Очищаем текст от markdown и лишних символов\nconst cleanText = aiResponse.replace(/``````\\n?/g, '').trim();\n\n// Ищем JSON массив в ответе\nconst jsonMatch = cleanText.match(/\\[[\\s\\S]*\\]/);\n\ntry {\n  if (jsonMatch) {\n    parsedPlan = JSON.parse(jsonMatch[0]);\n    responseType = 'plan_created';\n  } else {\n    // Попытка распарсить весь текст\n    parsedPlan = JSON.parse(cleanText);\n    responseType = 'plan_created';\n  }\n} catch (error) {\n  responseType = 'question';\n}\n\nif (responseType === 'plan_created') {\n  staticData.learningPlan = parsedPlan;\n  staticData.mode = 'learning'; \n  staticData.currentModuleIndex = 0;\n  staticData.currentConceptIndex = 0;\n  \n  // Формируем красивое сообщение с планом\n  let planText = \"✅ План обучения создан!\\n\\n\";\n  parsedPlan.forEach((module, idx) => {\n    planText += `📚 Модуль ${idx + 1}: ${module.theme}\\n`;\n    module.concepts.forEach(c => planText += `   • ${c}\\n`);\n    planText += \"\\n\";\n  });\n  planText += \"Готов начать обучение? Просто напиши 'далее' или 'начнем'\";\n  \n  return [{\n    json: {\n      type: responseType,\n      text: planText,\n      plan: parsedPlan\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    type: responseType,\n    text: aiResponse,\n    plan: null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        112
+      ],
+      "id": "78a14e65-d78b-4269-bc2c-29850cf1f751",
+      "name": "change status"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\n\n// 1. Проверки наличия плана (как было раньше)\nif (!staticData.learningPlan) {\n  // ... логика сброса ...\n  return [{ json: { message: \"План не найден...\", finished: true } }];\n}\n\n// 2. Получаем текущую тему\nconst plan = staticData.learningPlan;\nlet mIndex = staticData.currentModuleIndex || 0;\nlet cIndex = staticData.currentConceptIndex || 0;\n\nif (mIndex >= plan.length) {\n    // ... логика завершения ...\n    return [{ json: { message: \"Курс завершен!\", finished: true } }];\n}\n\nconst currentModule = plan[mIndex];\nconst currentConcept = currentModule.concepts[cIndex];\n\n// 3. Формируем задачу для твоего AI-агента \"learning\"\n// Мы просим его найти информацию, используя его инструмент tavily(...)\nconst promptForAgent = `Мне нужно изучить понятие \"${currentConcept}\" из темы \"${currentModule.theme}\". \nНайди в интернете информацию об этом (определения, примеры кода, лучшие практики) и подготовь обучающий пост.`;\n\n// Обновляем индексы (двигаемся дальше)\ncIndex++;\nif (cIndex >= currentModule.concepts.length) {\n    cIndex = 0;\n    mIndex++;\n}\nstaticData.currentModuleIndex = mIndex;\nstaticData.currentConceptIndex = cIndex;\n\nreturn [{\n    json: {\n        chatInput: promptForAgent,\n        topic: currentModule.theme,\n        concept: currentConcept,\n        finished: false\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        400
+      ],
+      "id": "9ca4eaf5-6584-4659-9620-4e783d4e6550",
+      "name": "check plan"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -688,
+        256
+      ],
+      "id": "7a6921e4-0a16-4f8a-82a6-45cd0de492ed",
+      "name": "Telegram Trigger",
+      "webhookId": "df5ba699-9494-47e3-b573-d0848aaa0512",
+      "credentials": {
+        "telegramApi": {
+          "id": "RKUCs2ebPcilFkbm",
+          "name": "Mentor_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        112
+      ],
+      "id": "ca523197-d375-4a1f-8289-212f2a96704f",
+      "name": "mentor answer",
+      "webhookId": "c6338471-f4f6-4ec6-9628-630883f691e1",
+      "credentials": {
+        "telegramApi": {
+          "id": "RKUCs2ebPcilFkbm",
+          "name": "Mentor_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Ты — ИИ-агент внутри n8n. Если для ответа нужны актуальные данные из интернета или новости, ты НЕ отвечаешь сразу. Вместо этого ты пишешь строку ровно в формате tavily(query=\"...\"), где в кавычках — краткий поисковый запрос. Никакого другого текста."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        400
+      ],
+      "id": "e8e5b98d-555b-4693-8f88-b871caeffb97",
+      "name": "Laearning"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1712,
+        304
+      ],
+      "id": "b46fde97-4d7a-4fec-bfad-3b8f9e9b0bd5",
+      "name": "answer with tavily",
+      "webhookId": "c6338471-f4f6-4ec6-9628-630883f691e1",
+      "credentials": {
+        "telegramApi": {
+          "id": "RKUCs2ebPcilFkbm",
+          "name": "Mentor_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.response }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        496
+      ],
+      "id": "10e63398-6681-4455-80fd-512dd8af49e0",
+      "name": "answer without tavily",
+      "webhookId": "c6338471-f4f6-4ec6-9628-630883f691e1",
+      "credentials": {
+        "telegramApi": {
+          "id": "RKUCs2ebPcilFkbm",
+          "name": "Mentor_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.message_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        128,
+        224
+      ],
+      "id": "510ec16b-c4d2-4aca-a458-9631fd922bf5",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.message_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        464,
+        544
+      ],
+      "id": "9914ba16-1c0c-4f9f-b6d4-681dd339bf77",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.message_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1504,
+        528
+      ],
+      "id": "74923f21-3635-4749-a1ea-d5599759938e",
+      "name": "Simple Memory2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Laearning",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Tavily",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "answer without tavily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ai+tavily",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parser": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get status": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily": {
+      "main": [
+        [
+          {
+            "node": "ai+tavily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai+tavily": {
+      "main": [
+        [
+          {
+            "node": "answer with tavily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Mentor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mentor": {
+      "main": [
+        [
+          {
+            "node": "change status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Mentor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "check plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "change status": {
+      "main": [
+        [
+          {
+            "node": "mentor answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check plan": {
+      "main": [
+        [
+          {
+            "node": "Laearning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "get status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Laearning": {
+      "main": [
+        [
+          {
+            "node": "parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Mentor",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Laearning",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "ai+tavily",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2194d55a-9d4d-4b10-95dc-2e5958cf2383",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fa00bab3674301fd8e44610c89da4fc8750bc18caf65f232a475954e73363fbb"
+  },
+  "id": "IjjumcJX7mjLM50Z",
+  "tags": []
+}

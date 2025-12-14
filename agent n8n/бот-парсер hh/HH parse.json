@@ -1,0 +1,221 @@
+{
+  "name": "HH parse",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 7,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        304
+      ],
+      "id": "3bb6b393-4729-4b0b-b5b6-753b2fb90941",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Извлеки технические навыки для разработчика Java из этих вакансий:\n{{ $json.vacancies_text }}\nДля парсинга используй не более 20 вакансий\n\nСделай дайджест в следующем формате:\n\nНа этой неделе я спарсил N свежих вакансий по выбранному тобой направлению. Самыми популярными являются следующие требования:\n\nтребование 1: количество раз\n\nтребование 2: количество раз\n\nтребование 3: количество раз\n\nтребование N: n раз",
+        "options": {
+          "systemMessage": "Ты - HR в IT с большим опытом. Извлекай из описания вакансий только конкретные технические навыки и требования для Java backend разработчика."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        1584,
+        304
+      ],
+      "id": "012e172e-2bce-4551-9cc8-830d190281a4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1584,
+        464
+      ],
+      "id": "14810083-1081-4da6-a379-cba830118754",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "UtnlsnFRmdUR6Bk3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1003196789292",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1888,
+        304
+      ],
+      "id": "15890473-4fa9-44a5-adbe-b0924ea4ce12",
+      "name": "Send a text message",
+      "webhookId": "80abb3b7-7e04-4adc-a97c-0877557d5267",
+      "credentials": {
+        "telegramApi": {
+          "id": "BrZXym9JvzVnoWN3",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "Java разработчик"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "50"
+            },
+            {
+              "name": "order_by",
+              "value": "publication_time"
+            },
+            {
+              "name": "area",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-agent",
+              "value": "danil3341@mail.ru"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1232,
+        304
+      ],
+      "id": "ab8133ee-6512-447e-a731-4e883a43b0fe",
+      "name": "vacancy parse"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst vacancies = items[0].json.items;\n\nlet textForAI = \"ВАКАНСИИ JAVA:\\n\";\n\nvacancies.forEach((vacancy, index) => {\n  textForAI += `=== ВАКАНСИЯ ${index + 1} ===\\n`;\n  textForAI += `Должность: ${vacancy.name}\\n`;\n  textForAI += `Описание: ${vacancy.snippet?.requirement || 'Нет описания'}\\n`;\n  textForAI += `Компания: ${vacancy.employer?.name || 'Не указана'}\\n`;\n  textForAI += `Ссылка: ${vacancy.alternate_url}\\n\\n`;\n});\n\nreturn [{\n  vacancies_text: textForAI,\n  total_count: vacancies.length,\n  raw_vacancies: vacancies\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        304
+      ],
+      "id": "2ebb1ad8-f336-484c-9c64-b206cc9e2794",
+      "name": "Format description"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "vacancy parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "vacancy parse": {
+      "main": [
+        [
+          {
+            "node": "Format description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format description": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "84a65b11-325d-40fe-b1d7-351c62da2b14",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fa00bab3674301fd8e44610c89da4fc8750bc18caf65f232a475954e73363fbb"
+  },
+  "id": "z0vseTaZzPYS7bEF",
+  "tags": []
+}

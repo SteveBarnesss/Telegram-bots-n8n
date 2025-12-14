@@ -1,0 +1,275 @@
+{
+  "name": "didgest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        144
+      ],
+      "id": "6d97b301-7729-4f0d-9ce1-410226ca4f70",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        144
+      ],
+      "id": "4a97752b-1c47-4239-9186-14f078565861",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text_for_ai }}",
+        "options": {
+          "systemMessage": "Ты — профессиональный редактор новостного Telegram-канала. Твоя задача — превратить входящий текст в один форматированный дайджест-пост для Telegram.\n\nСтрого используй только следующие теги для форматирования текста:\n<b>текст</b> или <strong>текст</strong> — жирный.\n<i>текст</i> или <em>текст</em> — курсив.\n<u>текст</u> — подчеркнутый.\n<s>текст</s>, <strike>текст</strike> или <del>текст</del> — зачеркнутый.\n<tg-spoiler>текст</tg-spoiler> — скрытый текст (спойлер, нужно нажать, чтобы прочитать).\n<a href=\"http://www.example.com/\">текст ссылки</a> — ссылка.\n<code>текст</code> — моноширинный код (копируется по клику).\n<pre>текст</pre> — блок кода (сохраняет форматирование).\n<blockquote>текст</blockquote> — цитата (вертикальная черта слева).\n\nНи в коем случае не используй теги включающие в себя символы '*' '#' и др символы не поддерживаемые telegram.\n\nСтрого используй структуру представленную ниже:\n\nСтруктура дайджест-поста: \nОбщая сводка о всех постах в одном абзаце (курсив)+(заинтересуй читателя).\n\nНазвание канала - количество постов (жирный шрифт).\nпост 1: краткое описание, ссылка на пост\nпост 2: краткое описание, ссылка на пост\nпост n: краткое описание, ссылка на пост\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        576,
+        160
+      ],
+      "id": "0fba7392-bcc6-454f-a0e4-b484dbd9dc6e",
+      "name": "AI Agent1",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        576,
+        352
+      ],
+      "id": "fc609ef1-1509-47c0-9a0b-2ebe78d2ed86",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "UtnlsnFRmdUR6Bk3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1003196789292",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_notification": true,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        160
+      ],
+      "id": "22df593d-b418-4ac9-bc48-bb1d3175efd8",
+      "name": "Telegram",
+      "webhookId": "229886d7-ae44-4fd0-af50-c5fbf7dcd937",
+      "notesInFlow": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "BrZXym9JvzVnoWN3",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://rss.app/feeds/Nw1K1CgDePjzg26b.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        288
+      ],
+      "id": "80f62f5a-e2e8-49b6-bba8-f2b64db694d7",
+      "name": "Библиотека Go разработчика – Telegram"
+    },
+    {
+      "parameters": {
+        "url": "https://rss.app/feeds/KwRNSAOthQbKSVyD.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        144
+      ],
+      "id": "a700bdc1-e30f-4737-8d2f-3292f9fe6691",
+      "name": "Golang вопросы собеседований"
+    },
+    {
+      "parameters": {
+        "url": "https://rss.app/feeds/lUsk8Mo79qiVYK8b.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0dd30f8e-fbe7-4208-a5f2-c8acaf2276fc",
+      "name": "Golang"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (items.length === 0) {\n  return { json: { text_for_ai: \"За последние 24 часа новостей нет.\" } };\n}\n\n// Формируем текстовый список для Агента\n// Берем название канала\nconst text = items.map(item => {\n  const channel = item.json.feed?.title; \n  const title = item.json.title;\n  const link = item.json.link;\n  const desc = item.json.contentSnippet || item.json.description || \"\";\n  return `CHANNEL: ${channel}\nTITLE: ${title}\nLINK: ${link}\nSUMMARY: ${desc}\n----------------`;\n}).join(\"\\n\");\n\nreturn [{ json: { text_for_ai: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        160
+      ],
+      "id": "655d8960-1734-4cc4-8fba-a3b9b9b4fe12",
+      "name": "Сборка новостей"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Golang",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Golang вопросы собеседований",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Библиотека Go разработчика – Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Сборка новостей",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Библиотека Go разработчика – Telegram": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Golang вопросы собеседований": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Golang": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Сборка новостей": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bc239b6c-e59e-4703-9b3d-ec064ac358a9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fa00bab3674301fd8e44610c89da4fc8750bc18caf65f232a475954e73363fbb"
+  },
+  "id": "yqefOra9w072767K",
+  "tags": []
+}
